@@ -88,9 +88,6 @@ module Beaglebone #:nodoc:
 
         spiinfo = SPIS[spi]
 
-        #ensure dtb is loaded
-        Beaglebone::device_tree_load("#{spiinfo[:devicetree]}") if spiinfo[:devicetree]
-
         #open the spi device.
         spi_fd = File.open("#{spiinfo[:dev]}#{SPIS[:counter]}.0", 'r+')
 

@@ -15,48 +15,6 @@ module Beaglebone #:nodoc:
     class << self
       attr_accessor :uartstatus, :uartmutex
 
-      # dts template for UART3 device
-      UARTTEMPLATE = []
-      UARTTEMPLATE[3] = '
-/dts-v1/;
-/plugin/;
-
-/ {
-  compatible = "ti,beaglebone", "ti,beaglebone-black";
-
-  /* identification */
-  part-number = "BB-UART3";
-  version = "00A0";
-
-  /* state the resources this cape uses */
-  exclusive-use =
-    /* the pin header uses */
-    "P9.42",  /* uart3_txd */
-    /* the hardware ip uses */
-    "uart3";
-
-  fragment@0 {
-    target = <&am33xx_pinmux>;
-    __overlay__ {
-      bb_uart3_pins: pinmux_bb_uart3_pins {
-        pinctrl-single,pins = <
-          0x164 0x01 
-        >;
-      };
-    };
-  };
-
-  fragment@1 {
-    target = <&uart4>;  /* really uart3 */
-    __overlay__ {
-      status = "okay";
-      pinctrl-names = "default";
-      pinctrl-0 = <&bb_uart3_pins>;
-    };
-  };
-};
-'
-
       # Initialize a UART device
       #
       # @param uart should be a symbol representing the UART device
@@ -72,12 +30,6 @@ module Beaglebone #:nodoc:
         return if get_uart_status(uart)
 
         uartinfo = UARTS[uart]
-
-        #ensure we have a dtb to load
-        create_device_tree(uart)
-
-        #ensure dtb is loaded
-        Beaglebone::device_tree_load("#{TREES[:UART][:pin]}#{uartinfo[:id]}")
 
         #open the uart device
         uart_fd = File.open(uartinfo[:dev], 'r+')
@@ -487,32 +439,6 @@ module Beaglebone #:nodoc:
 
       end
 
-      def create_device_tree(uart, force = false)
-        uartinfo = UARTS[uart]
-
-        #ensure valid uart, and a template to create this exists
-        return unless uartinfo
-
-        uartnum =  uartinfo[:id]
-
-        return unless uartnum && UARTTEMPLATE[uartnum]
-
-        dts = UARTTEMPLATE[uartinfo[:id]].clone
-
-        filename = "/lib/firmware/#{TREES[:UART][:pin]}#{uartnum}-00A0"
-        dts_fn = "#{filename}.dts"
-        dtb_fn = "#{filename}.dtbo"
-
-        # if we've already built this file, we don't need to do it again
-        return if File.exists?(dtb_fn) && !force
-
-        dts_file = File.open(dts_fn, 'w')
-        dts_file.write(dts)
-        dts_file.close
-
-        system("dtc -O dtb -o #{dtb_fn} -b 0 -@ #{dts_fn}")
-
-      end
 
     end
   end

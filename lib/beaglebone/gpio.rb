@@ -20,44 +20,7 @@ module Beaglebone #:nodoc:
       # pull modes
       PULLMODES = [ :PULLUP, :PULLDOWN, :NONE ]
 
-      # dts template for GPIO pin
-      GPIOTEMPLATE = '/*
- * This is a template-generated file
- */
-
-/dts-v1/;
-/plugin/;
-
-/{
-    compatible = "ti,beaglebone", "ti,beaglebone-black";
-    part_number = "BS_PINMODE_!PIN_KEY!_!DATA!";
-
-    exclusive-use =
-        "!PIN_DOT_KEY!",
-        "!PIN_FUNCTION!";
-
-    fragment@0 {
-        target = <&am33xx_pinmux>;
-        __overlay__ {
-            bs_pinmode_!PIN_KEY!_!DATA!: pinmux_bs_pinmode_!PIN_KEY!_!DATA! {
-                pinctrl-single,pins = <!PIN_OFFSET! !DATA!>;
-            };
-        };
-    };
-
-    fragment@1 {
-        target = <&ocp>;
-        __overlay__ {
-            bs_pinmode_!PIN_KEY!_!DATA!_pinmux {
-                compatible = "bone-pinmux-helper";
-                status = "okay";
-                pinctrl-names = "default";
-                pinctrl-0 = <&bs_pinmode_!PIN_KEY!_!DATA!>;
-            };
-        };
-    };
-};
-'
+      
       # Initialize a GPIO pin
       #
       # @param pin should be a symbol representing the header pin
@@ -99,19 +62,6 @@ module Beaglebone #:nodoc:
           File.open("#{gpio_directory(pin)}/trigger", 'w') { |f| f.write('gpio') }
         else
           # if pin is not an onboard LED
-
-          # create device tree overlay for this pin, do not force rebuild
-          pin_data = create_device_tree(pin, mode, pullmode, slewrate, false)
-
-          # unload previous dtb if loaded
-          begin
-            Beaglebone::device_tree_unload("#{TREES[:GPIO][:pin]}#{pin}_.*")
-          rescue
-            #
-          end
-
-          # load device tree overlay
-          Beaglebone::device_tree_load("#{TREES[:GPIO][:pin]}#{pin}_0x#{pin_data.to_s(16)}")
 
           # export gpio pin
           begin
@@ -539,56 +489,6 @@ module Beaglebone #:nodoc:
       def check_gpio_enabled(pin)
         Beaglebone::check_valid_pin(pin, :gpio)
         raise StandardError, "PIN not GPIO enabled: #{pin}" unless enabled?(pin)
-      end
-
-      def create_device_tree(pin, mode, pullmode, slewrate, force = false)
-        #get info from PINS hash
-        pininfo = PINS[pin]
-
-        #generate data value for dts
-        #Bit 15 PIN USAGE is an indicator and should be a 1 if the pin is used or 0 if it is unused.
-        # Bits 14-7 RESERVED is not to be used and left as 0.
-        # Bit 6 SLEW CONTROL 0=Fast 1=Slow
-        # Bit 5 RX Enabled 0=Disabled 1=Enabled
-        # Bit 4 PU/PD 0=Pulldown 1=Pullup.
-        # Bit 3 PULLUP/DN 0=Pullup/pulldown enabled 1= Pullup/pulldown disabled
-        # Bit 2-0 MUX MODE SELECT Mode 0-7. (refer to TRM)
-        pin_data = 0
-        pin_data |= 0b1000000 if slewrate == :SLOW
-        pin_data |= 0b100000 if mode == :IN
-        case pullmode
-          when :PULLUP
-            pin_data |= 0b10000
-          when :NONE
-            pin_data |= 0b1000
-          else
-            # default is pulldown enabled
-        end
-        #set mux mode, 7 is gpio
-        pin_data |= 7
-
-        dts = GPIOTEMPLATE.clone
-
-        dts.gsub!('!PIN_KEY!', pin.to_s)
-        dts.gsub!('!PIN_DOT_KEY!', pin.to_s.gsub('_', '.'))
-        dts.gsub!('!PIN_FUNCTION!', pininfo[:gpiofunc])
-        dts.gsub!('!PIN_OFFSET!', pininfo[:muxoffset])
-        dts.gsub!('!DATA!', "0x#{pin_data.to_s(16)}")
-
-        filename = "/lib/firmware/#{TREES[:GPIO][:pin]}#{pin}_0x#{pin_data.to_s(16)}-00A0"
-        dts_fn = "#{filename}.dts"
-        dtb_fn = "#{filename}.dtbo"
-
-        # if we've already built this file, we don't need to do it again
-        return pin_data if File.exists?(dtb_fn) && !force
-
-        dts_file = File.open(dts_fn, 'w')
-        dts_file.write(dts)
-        dts_file.close
-
-        system("dtc -O dtb -o #{dtb_fn} -b 0 -@ #{dts_fn}")
-
-        pin_data
       end
     end
   end

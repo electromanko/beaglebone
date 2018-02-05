@@ -233,44 +233,6 @@ module Beaglebone
       end
     end
 
-    # return capemgr directory
-    def get_capemgr_dir
-      Dir.glob([ '/sys/devices/bone_capemgr.*', '/sys/devices/platform/bone_capemgr' ]).first
-    end
-
-    # check if device tree is loaded
-    def device_tree_loaded?(name)
-      !!File.open("#{get_capemgr_dir}/slots").read.match(/,#{name}$/)
-    end
-
-    # load a device tree
-    def device_tree_load(name, delay=0.25)
-      return true if loaded_dtbs.include?(name)
-
-      if device_tree_loaded?(name)
-        loaded_dtbs << name
-        return true
-      end
-
-      File.open("#{get_capemgr_dir}/slots", 'w') { |f| f.write(name) }
-      sleep delay
-      raise StandardError, "Unable to load device tree: #{name}" unless device_tree_loaded?(name)
-      true
-    end
-
-    # unload a device tree, return false if not loaded, return true if it unloads
-    def device_tree_unload(name)
-      return false unless device_tree_loaded?(name)
-
-      dtb_id = File.open("#{get_capemgr_dir}/slots", 'r').read.scan(/^ ?(\d+): .*?,#{name}/).flatten.first
-
-      File.open("#{get_capemgr_dir}/slots", 'w') { |f| f.write("-#{dtb_id}") }
-
-      raise StandardError, "Unable to unload device tree: #{name}" if device_tree_loaded?(name)
-
-      true
-    end
-
     # cleanup all the things
     def cleanup
       Beaglebone::AIN.cleanup
