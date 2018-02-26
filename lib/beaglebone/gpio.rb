@@ -385,9 +385,6 @@ module Beaglebone #:nodoc:
           #
         end
 
-        #unload device tree
-        Beaglebone::device_tree_unload("#{TREES[:GPIO][:pin]}#{pin}_.*") unless pininfo[:led]
-
         #remove status from hash so following enabled? call checks actual system
         Beaglebone::delete_pin_status(pin)
 

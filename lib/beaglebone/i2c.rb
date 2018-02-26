@@ -29,9 +29,6 @@ module Beaglebone #:nodoc:
 
         i2cinfo = I2CS[i2c]
 
-        #ensure dtb is loaded
-        Beaglebone::device_tree_load("#{i2cinfo[:devicetree]}") if i2cinfo[:devicetree]
-
         #open the i2c device
         i2c_fd = File.open(i2cinfo[:dev], 'r+')
 

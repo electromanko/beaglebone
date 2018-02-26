@@ -23,9 +23,7 @@ module Beaglebone #:nodoc:
       # @example
       #   PWM.start(:P9_14, 90, 10, :NORMAL)
       def start(pin, duty=nil, frequency=nil, polarity=nil, run=true)
-        #make sure the pwm controller dtb is loaded
-        Beaglebone::device_tree_load(TREES[:PWM][:global])
-
+        
         Beaglebone::check_valid_pin(pin, :pwm)
 
         #if pin is enabled for something else, disable it
