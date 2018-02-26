@@ -128,7 +128,7 @@ module Beaglebone #:nodoc:
       #   raw = SPI.xfer(:SPI0, [ 0b00000001, 0b10000000, 0].pack("C*"))
       #   data = raw.unpack("C*")
       #   val = ((data[1] & 0b00000011) << 8 ) | data[2]
-      def xfer(spi, tx_data, readbytes=0, speed=nil, delay=nil, bpw=nil)
+      def xfer(spi, tx_data, readbytes=0, speed=nil, delay=nil, bpw=nil, n_msg=1)
         check_spi_enabled(spi)
 
         speed = speed || get_spi_status(spi, :speed)
@@ -167,9 +167,12 @@ module Beaglebone #:nodoc:
                   0].pack('pLpLLLSCCL')
 
           #ioctl call to begin data transfer
-          spi_fd.ioctl(SPI_IOC_MESSAGE_1, msg)
-          #speedup with defined int
-          #spi_fd.ioctl(spi_ioc_message(1), msg)
+          if n_msg > 1
+            #speedup with defined int
+            spi_fd.ioctl(spi_ioc_message(n_msg), msg)
+          else
+            spi_fd.ioctl(SPI_IOC_MESSAGE_1, msg)
+          end
 
         end
         rx_data
@@ -417,8 +420,8 @@ module Beaglebone #:nodoc:
     #   raw = spi.xfer([ 0b00000001, 0b10000000, 0].pack("C*"))
     #   data = raw.unpack("C*")
     #   val = ((data[1] & 0b00000011) << 8 ) | data[2]
-    def xfer(tx_data, readbytes=0, speed=nil, delay=nil, bpw=nil)
-      SPI::xfer(@spi, tx_data, readbytes, speed, delay, bpw)
+    def xfer(tx_data, readbytes=0, speed=nil, delay=nil, bpw=nil, n_msg=1)
+      SPI::xfer(@spi, tx_data, readbytes, speed, delay, bpw, n_msg)
     end
 
     # Return the file descriptor to the open SPI device
