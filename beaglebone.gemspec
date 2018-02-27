@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'beaglebone'
   s.version     = '2.2.7'
-  s.date        = '2018-03-05'
+  s.date        = '2018-03-07'
   s.summary     = 'Beaglebone IO Gem'
   s.description = 'A Full Featured Beaglebone IO Gem'
   s.author      = 'Rob Mosher'

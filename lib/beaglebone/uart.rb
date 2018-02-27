@@ -8,6 +8,7 @@ module Beaglebone #:nodoc:
   module UART
     # Valid UART speeds
     SPEEDS = [ 110, 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 56000, 57600, 115200 ]
+    PARITY = [:NONE, :ODD, :EVEN]
 
     @uartstatus = {}
     @uartmutex = Mutex.new
@@ -22,7 +23,7 @@ module Beaglebone #:nodoc:
       #
       # @example
       #   UART.setup(:UART1, 9600)
-      def setup(uart, speed=9600)
+      def setup(uart, speed=9600, parity=nil)
         check_uart_valid(uart)
         check_speed_valid(speed)
 
@@ -49,6 +50,17 @@ module Beaglebone #:nodoc:
         system("stty -F #{uartinfo[:dev]} raw")
         system("stty -F #{uartinfo[:dev]} #{speed}")
 
+          if parity.nil? || parity == :NONE
+            system("stty -F #{uartinfo[:dev]} -parenb" )
+          elsif parity == :ODD
+            system("stty -F #{uartinfo[:dev]} parenb" )
+            system("stty -F #{uartinfo[:dev]} parodd")
+          elsif parity == :EVEN
+            system("stty -F #{uartinfo[:dev]} parenb" )
+            system("stty -F #{uartinfo[:dev]} -parodd")
+          end
+        
+
         set_uart_status(uart, :fd_uart, uart_fd)
       end
 
@@ -64,6 +76,23 @@ module Beaglebone #:nodoc:
 
         uartinfo = UARTS[uart]
         system("stty -F #{uartinfo[:dev]} #{speed}")
+      end
+      
+      def set_parity(uart, parity)
+        check_uart_valid(uart)
+        check_parity_valid(parity)
+
+        uartinfo = UARTS[uart]
+
+          if parity == :NONE
+            system("stty -F #{uartinfo[:dev]} -parenb" )
+          elsif parity == :ODD
+            system("stty -F #{uartinfo[:dev]} parenb" )
+            system("stty -F #{uartinfo[:dev]} parodd")
+          elsif parity == :EVEN
+            system("stty -F #{uartinfo[:dev]} parenb" )
+            system("stty -F #{uartinfo[:dev]} -parodd")
+          end
       end
 
       # Write data to a UART device
@@ -423,6 +452,10 @@ module Beaglebone #:nodoc:
       def check_speed_valid(speed)
         raise ArgumentError, "Invalid speed specified: #{speed}" unless SPEEDS.include?(speed)
       end
+      
+      def check_parity_valid(parity)
+        raise ArgumentError, "Invalid parity specified: #{parity}" unless PARITY.include?(parity)
+      end
 
       # disable a uart pin
       def disable_uart_pin(pin)
@@ -453,9 +486,9 @@ module Beaglebone #:nodoc:
     #
     # @example
     #   uart1 = UARTDevice.new(:UART1, 9600)
-    def initialize(uart, speed=9600)
+    def initialize(uart, speed=9600, parity=nil)
       @uart = uart
-      UART::setup(@uart, speed)
+      UART::setup(@uart, speed, parity)
     end
 
     # Set the speed of the UART
@@ -466,6 +499,10 @@ module Beaglebone #:nodoc:
     #   uart1.set_speed(9600)
     def set_speed(speed)
       UART::set_speed(@uart, speed)
+    end
+    
+    def set_parity(parity)
+      UART::set_parity(@uart, parity)
     end
 
     # Write data to a UART device
